@@ -128,7 +128,27 @@ def FFT_1D(vector):
     return X
 
 def inverse_FFT_1D(vector):
-    print("TODO")
+    N = len(vector)
+
+    # Base case: Use naive when size is small 
+    if N <= 16:
+        return naive_inverse_DFT_1D(vector)
+    
+    # Split input array into even-indexed elements and odd-indexed elements and compute the FFT for each
+    even = inverse_FFT_1D(vector[::2]) # take every second element starting from index 0
+    odd = inverse_FFT_1D(vector[1::2]) # same as above but starting from index 1
+
+    # Combine the results of even and odd
+    # X = even + factor * odd
+    X = np.zeros(N, dtype=complex)
+    k = np.arange(N // 2)
+    factor = np.exp((2j * np.pi * k) / N)
+
+
+    X[:N // 2] = even + factor * odd # first half: lower frequencies
+    X[N // 2:] = even - factor * odd # second half: higher frequencies
+
+    return X / N
 
 def FFT_2D(vector):
     print("TODO")
@@ -164,13 +184,13 @@ if __name__ == "__main__":
     y = fft(x)
     print(y)
 
-    z = naive_DFT_1D(adjusted_image_array[1])
+    z = naive_inverse_DFT_1D(adjusted_image_array[1])
     print("naive" + str(z))
 
-    za = FFT_1D(adjusted_image_array[1])
+    za = inverse_FFT_1D(adjusted_image_array[1])
     print("fft" + str(za))
 
-    zb = fft(adjusted_image_array[1])
+    zb = ifft(adjusted_image_array[1])
     print("real" + str(zb))
     # w = ifft(y)
     # print(w)

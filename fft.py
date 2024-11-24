@@ -1,8 +1,9 @@
 import argparse
 import numpy as np
-import matplotlib.image as pltimage
 import cv2
 import math 
+from scipy.fft import fft, ifft, fft2, ifft2
+
 
 def parse_input():
     '''
@@ -33,18 +34,89 @@ def get_adjusted_dimensions(image_path):
 
     return adjusted_image_array
 
-# Discrete fourier transform -> X_k = sum{n: 0 to N-1}(x_n * e^(-i2{pi}kn/N)) for k = 0 to N-1
-def naive_dft_1D(image_array):
-    print("naive_dft_1D")
 
-# Discrete fourier transform (inverse) -> x_n = 1/N * sum{k: 0 to N-1}(X_n * e^(i2{pi}kn/N)) for k = 0 to N-1
-def naive_inverse_dft_1D(image_array):
-    print("naive_inverse_dft_1D")
+# ========================================= Discrete Fourier Transform (1D and 2D) =========================================
 
-# check instructions 
-def naive_dft_2D(image_array):
-    print("naive_dft_2D")
+# Discrete Fourier Transform (DFT) -> X_k = sum{n: 0 to N-1}(x_n * e^(-i*[2{pi}*k*n]/N)) for k = 0 to N-1
+def naive_DFT_1D(vector):
+    # print("naive_DFT_1D")
 
+    N = len(vector)
+    X = np.zeros(N, dtype=complex)
+
+    for k in range(N): 
+        for n in range(N): 
+            X[k] = X[k] + (vector[n] * np.exp((-2j * math.pi * k * n)/N))
+
+    return X 
+
+
+# Discrete fourier transform (inverse) -> x_n = 1/N * sum{k: 0 to N-1}(X_n * e^(-i*[2{pi}*k*n]/N)) for k = 0 to N-1
+def naive_inverse_DFT_1D(vector):
+    # print("naive_inverse_DFT_1D")
+
+    N = len(vector)
+    x = np.zeros(N, dtype=complex)
+
+    for n in range(N): 
+        for k in range(N): 
+            x[n] = x[n] + (vector[k] * np.exp((2j * math.pi * k * n)/N))
+        
+        x[n] = 1/N * x[n]
+
+    return x 
+
+# Discrete fourier transform 2D
+def naive_DFT_2D(vector_2D):
+    print("naive_DFT_2D")
+
+    M = len(vector_2D[0]) #row/width 
+    N = len(vector_2D) #column/height
+    F = np.zeros((N,M), dtype=complex)
+    
+    # Iterating over every row of the 2D vector (?)
+    for m in range(M): 
+        F[:, m] = naive_DFT_1D(vector_2D[:, m])
+    
+    # Iterating over every column of the 2D vector (?)
+    for n in range(N): 
+        F[n] = naive_DFT_1D(F[n])
+    
+    return F
+
+# Discrete fourier transform 2D (Inverse)
+def naive_inverse_DFT_2D(vector_2D):
+    print("naive_inverse_DFT_2D")
+
+    M = len(vector_2D[0]) #row/width 
+    N = len(vector_2D) #column/height
+    F = np.zeros((N,M), dtype=complex)
+    
+    # Iterating over every row of the 2D vector (?)
+    for m in range(M): 
+        F[:, m] = naive_inverse_DFT_1D(vector_2D[:, m])
+    
+    # Iterating over every column of the 2D vector (?)
+    for n in range(N): 
+        F[n] = naive_inverse_DFT_1D(F[n])
+
+    return F
+
+# ========================================= Fast Fourier Transform (1D and 2D) =========================================
+
+def FFT_1D(vector):
+    print("TODO")
+
+def inverse_FFT_1D(vector):
+    print("TODO")
+
+def FFT_1D(vector):
+    print("TODO")
+
+def inverse_FFT_2D(vector):
+    print("TODO")
+
+# # ===================================================================================================================
 
 if __name__ == "__main__":
     args = parse_input()
@@ -63,3 +135,23 @@ if __name__ == "__main__":
     print("adjusted dimensions:")
     print(len(adjusted_image_array))
     print(len(adjusted_image_array[0]))
+
+    # naive_dft_1D(adjusted_image_array)
+    
+    # Testing the 1D DFT
+    # x = np.array([1.0, 2.0, 1.0, -1.0, 1.5])
+    # # print(x)
+    # y = fft(x)
+    # # print(y)
+    # w = ifft(y)
+    # print(w)
+    # z = naive_inverse_DFT_1D(y)
+    # print(z)
+
+
+    # Testing the 2D DFT
+    # x = np.mgrid[:3, :3][0]
+    # print(x)
+    # print(ifft2(x))
+    # print(naive_inverse_DFT_2D(x))
+    

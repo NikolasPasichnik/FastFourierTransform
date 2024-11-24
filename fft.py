@@ -22,7 +22,7 @@ def parse_input():
 
 # Adjusting the size of the inputted image to make sure the algorithms work. 
 def get_adjusted_dimensions(image_path):
-    image_array = cv2.imread(image_path)
+    image_array = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
 
     height_power = math.ceil(math.log2(len(image_array)))
     width_power = math.ceil(math.log2(len(image_array[0])))
@@ -46,7 +46,7 @@ def naive_DFT_1D(vector):
 
     for k in range(N): 
         for n in range(N): 
-            X[k] = X[k] + (vector[n] * np.exp((-2j * math.pi * k * n)/N))
+            X[k] = X[k] + (vector[n] * np.exp((-2j * np.pi * k * n)/N))
 
     return X 
 
@@ -105,12 +105,32 @@ def naive_inverse_DFT_2D(vector_2D):
 # ========================================= Fast Fourier Transform (1D and 2D) =========================================
 
 def FFT_1D(vector):
-    print("TODO")
+    N = len(vector)
+
+    # Base case: Use naive when size is small 
+    if N <= 8:
+        return naive_DFT_1D(vector)
+    
+    # Split input array into even-indexed elements and odd-indexed elements and compute the FFT for each
+    even = FFT_1D(vector[::2]) # take every second element starting from index 0
+    odd = FFT_1D(vector[1::2]) # same as above but starting from index 1
+
+    # Combine the results of even and odd
+    # X = even + factor * odd
+    X = np.zeros(N, dtype=complex)
+    k = np.arange(N // 2)
+    factor = np.exp((-2j * np.pi * k) / N)
+
+
+    X[:N // 2] = even + factor * odd # first half: lower frequencies
+    X[N // 2:] = even - factor * odd # second half: higher frequencies
+
+    return X
 
 def inverse_FFT_1D(vector):
     print("TODO")
 
-def FFT_1D(vector):
+def FFT_2D(vector):
     print("TODO")
 
 def inverse_FFT_2D(vector):
@@ -139,13 +159,22 @@ if __name__ == "__main__":
     # naive_dft_1D(adjusted_image_array)
     
     # Testing the 1D DFT
-    # x = np.array([1.0, 2.0, 1.0, -1.0, 1.5])
+    x = np.array([1.0, 2.0, 1.0, -1.0, 1.5])
     # # print(x)
-    # y = fft(x)
-    # # print(y)
+    y = fft(x)
+    print(y)
+
+    z = naive_DFT_1D(adjusted_image_array[1])
+    print("naive" + str(z))
+
+    za = FFT_1D(adjusted_image_array[1])
+    print("fft" + str(za))
+
+    zb = fft(adjusted_image_array[1])
+    print("real" + str(zb))
     # w = ifft(y)
     # print(w)
-    # z = naive_inverse_DFT_1D(y)
+    #z = naive_inverse_DFT_1D(y)
     # print(z)
 
 

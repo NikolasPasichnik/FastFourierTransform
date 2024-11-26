@@ -3,7 +3,8 @@ import numpy as np
 import cv2
 import math 
 from scipy.fft import fft, ifft, fft2, ifft2
-
+import matplotlib.pyplot as plt
+import matplotlib.colors as colors
 
 def parse_input():
     '''
@@ -34,7 +35,6 @@ def get_adjusted_dimensions(image_path):
 
     return adjusted_image_array
 
-
 # ========================================= Discrete Fourier Transform (1D and 2D) =========================================
 
 # Discrete Fourier Transform (DFT) -> X_k = sum{n: 0 to N-1}(x_n * e^(-i*[2{pi}*k*n]/N)) for k = 0 to N-1
@@ -49,7 +49,6 @@ def naive_DFT_1D(vector):
             X[k] = X[k] + (vector[n] * np.exp((-2j * np.pi * k * n)/N))
 
     return X 
-
 
 # Discrete fourier transform (inverse) -> x_n = 1/N * sum{k: 0 to N-1}(X_n * e^(-i*[2{pi}*k*n]/N)) for k = 0 to N-1
 def naive_inverse_DFT_1D(vector):
@@ -104,16 +103,16 @@ def naive_inverse_DFT_2D(vector_2D):
 
 # ========================================= Fast Fourier Transform (1D and 2D) =========================================
 
-def FFT_1D(vector):
-    N = len(vector)
+def FFT_1D(vector_1D):
+    N = len(vector_1D)
 
     # Base case: Use naive when size is small 
-    if N <= 8:
-        return naive_DFT_1D(vector)
+    if N <= 16:
+        return naive_DFT_1D(vector_1D)
     
     # Split input array into even-indexed elements and odd-indexed elements and compute the FFT for each
-    even = FFT_1D(vector[::2]) # take every second element starting from index 0
-    odd = FFT_1D(vector[1::2]) # same as above but starting from index 1
+    even = FFT_1D(vector_1D[::2]) # take every second element starting from index 0
+    odd = FFT_1D(vector_1D[1::2]) # same as above but starting from index 1
 
     # Combine the results of even and odd
     # X = even + factor * odd
@@ -127,16 +126,16 @@ def FFT_1D(vector):
 
     return X
 
-def inverse_FFT_1D(vector):
-    N = len(vector)
+def inverse_FFT_1D(vector_1D):
+    N = len(vector_1D)
 
     # Base case: Use naive when size is small 
     if N <= 16:
-        return naive_inverse_DFT_1D(vector)
+        return naive_inverse_DFT_1D(vector_1D)
     
     # Split input array into even-indexed elements and odd-indexed elements and compute the FFT for each
-    even = inverse_FFT_1D(vector[::2]) # take every second element starting from index 0
-    odd = inverse_FFT_1D(vector[1::2]) # same as above but starting from index 1
+    even = inverse_FFT_1D(vector_1D[0::2]) # take every second element starting from index 0
+    odd = inverse_FFT_1D(vector_1D[1::2]) # same as above but starting from index 1
 
     # Combine the results of even and odd
     # X = even + factor * odd
@@ -144,63 +143,101 @@ def inverse_FFT_1D(vector):
     k = np.arange(N // 2)
     factor = np.exp((2j * np.pi * k) / N)
 
+    X[:N // 2] = (N//2)*(even + factor * odd) # first half: lower frequencies
+    X[N // 2:] = (N//2)*(even - factor * odd) # second half: higher frequencies
 
-    X[:N // 2] = even + factor * odd # first half: lower frequencies
-    X[N // 2:] = even - factor * odd # second half: higher frequencies
+    return X/N
 
-    return X / N
+def FFT_2D(vector_2D):
+    M = len(vector_2D[0]) #row/width 
+    N = len(vector_2D) #column/height
+    F = np.zeros((N,M), dtype=complex)
+    
+    # Iterating over every row of the 2D vector (?)
+    for m in range(M): 
+        F[:, m] = FFT_1D(vector_2D[:, m])
+    
+    # Iterating over every column of the 2D vector (?)
+    for n in range(N): 
+        F[n] = FFT_1D(F[n])
+    
+    return F
 
-def FFT_2D(vector):
-    print("TODO")
+def inverse_FFT_2D(vector_2D):
+    M = len(vector_2D[0]) #row/width 
+    N = len(vector_2D) #column/height
+    F = np.zeros((N,M), dtype=complex)
+    
+    # Iterating over every row of the 2D vector (?)
+    for m in range(M): 
+        F[:, m] = inverse_FFT_1D(vector_2D[:, m])
+    
+    # Iterating over every column of the 2D vector (?)
+    for n in range(N): 
+        F[n] = inverse_FFT_1D(F[n])
+    
+    return F
 
-def inverse_FFT_2D(vector):
-    print("TODO")
+# ========================================= Different Modes =========================================
 
-# # ===================================================================================================================
+def mode_1(image_array):
+    print("Mode 1")
+
+    # Obtaining the Fast Fourier Transform of the inputted image (its array) 
+    fft_image = FFT_2D(image_array)
+
+    # Plotting the resulting Fourier Transform 
+    fig, (graph1, graph2) = plt.subplots(1, 2)
+    graph1.set_title('Original Image')
+    graph1.imshow(image_array, cmap="gray")
+    graph2.set_title('Fourier Transform')
+    graph2.imshow(np.abs(fft_image), norm=colors.LogNorm())
+    plt.show()
+
+def mode_2():
+    print("mode 2")
+
+def mode_3():
+    print("mode 3")
+
+def mode_4():
+    print("mode 4")
+
+# ===================================================================================================
 
 if __name__ == "__main__":
     args = parse_input()
+
     # Getting input 
     print(args.mode)
     print(args.image)
 
-    # Original image dimensions
-    image_array = cv2.imread(args.image)
-    print("original dimensions:")
-    print(len(image_array)) #height
-    print(len(image_array[0])) #width 
-    
-    # Adjusted image dimensions 
+    # Getting adjusted dimensions 
     adjusted_image_array = get_adjusted_dimensions(args.image)
-    print("adjusted dimensions:")
-    print(len(adjusted_image_array))
-    print(len(adjusted_image_array[0]))
 
-    # naive_dft_1D(adjusted_image_array)
-    
-    # Testing the 1D DFT
-    x = np.array([1.0, 2.0, 1.0, -1.0, 1.5])
-    # # print(x)
-    y = fft(x)
-    print(y)
+    # # Testing the functions
+    # y = adjusted_image_array
 
-    z = naive_inverse_DFT_1D(adjusted_image_array[1])
-    print("naive" + str(z))
+    # za = FFT_2D(y)
+    # print("ours:")
+    # print(za)
 
-    za = inverse_FFT_1D(adjusted_image_array[1])
-    print("fft" + str(za))
+    # zb = fft2(y)
+    # print("actual:")
+    # print(zb)
 
-    zb = ifft(adjusted_image_array[1])
-    print("real" + str(zb))
-    # w = ifft(y)
-    # print(w)
-    #z = naive_inverse_DFT_1D(y)
-    # print(z)
+    # Running the correct mode
+    mode = args.mode
+    if mode == 1:
+        mode_1(adjusted_image_array)
+    elif mode == 2: 
+        mode_2()
+    elif mode == 3: 
+        mode_3()
+    elif mode == 4: 
+        mode_4()
+    else: 
+        print("Invalid mode") #add actual error
 
 
-    # Testing the 2D DFT
-    # x = np.mgrid[:3, :3][0]
-    # print(x)
-    # print(ifft2(x))
-    # print(naive_inverse_DFT_2D(x))
     

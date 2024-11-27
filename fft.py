@@ -180,6 +180,7 @@ def inverse_FFT_2D(vector_2D):
 
 # ========================================= Different Modes =========================================
 
+# Original vs. Fast Fourier Transform
 def mode_1(image_array):
     print("Mode 1")
 
@@ -194,8 +195,61 @@ def mode_1(image_array):
     graph2.imshow(np.abs(fft_image), norm=colors.LogNorm())
     plt.show()
 
-def mode_2():
+
+'''
+My vision for mode 2: 
+
+First get the fft_2d, that's fine it follows the instructions 
+
+Then, since they ask us to "set all the high frequencies" to 0, i want to to first find what a "high frequency" means using percentile 
+Now the reason for the np.abs is bcs np.percentile doesnt take imaginary numbers. 
+
+After getting the frequencies that represent the highest (~0 and ~2pi) 
+
+I want to filter the 2d array and set all the values that are <= lowest and >= highest to 0 
+
+then i want to get the ifft of this array. in theory, we should get the denoised version. 
+'''
+
+# Original vs. Denoised 
+def mode_2(image_array):
     print("mode 2")
+    
+    # Obtaining the Fast Fourier Transform of the inputted image (its array) 
+    fft_image = FFT_2D(image_array)
+
+    print("step 2")
+    # ~~Denoise Process~~
+    # High frequencies -> near 0 or 2pi, so we can get the bottom percentile (near 0) or the top percentile (near 2pi) 
+
+    # Getting the cutoffs 
+    low_frequency = np.percentile(np.abs(fft_image), 1)
+    high_frequency = np.percentile(np.abs(fft_image), 99)
+
+    print("step 3")
+    # Setting the high frequencies to 0 
+    choice = [0]
+    fft_image_filtered = np.select(np.logical_or(fft_image <= low_frequency,fft_image >= high_frequency), choice, fft_image)
+
+    print("step 4")
+    # Inverting the filtered image
+    denoised_image_filtered = inverse_FFT_2D(fft_image_filtered)
+    print("step 5")
+    # plotting 
+    # Plotting the resulting Fourier Transform 
+    fig, (graph1, graph2) = plt.subplots(1, 2)
+    graph1.set_title('Original Image')
+    graph1.imshow(image_array, cmap="gray")
+    graph2.set_title('Denoised Image')
+    graph2.imshow(np.abs(denoised_image_filtered), cmap="gray")
+    plt.show()
+
+    # Denoise: 
+    #   - take FFT of the image 
+    #   - set all the high frequencies to 0 
+    #   - take the IFFT of the FFT with updated high frequencies 
+
+
 
 def mode_3():
     print("mode 3")
@@ -216,13 +270,14 @@ if __name__ == "__main__":
     adjusted_image_array = get_adjusted_dimensions(args.image)
 
     # # Testing the functions
-    # y = adjusted_image_array
+    y = adjusted_image_array
+    # y = fft2(adjusted_image_array)
 
-    # za = FFT_2D(y)
+    # za = inverse_FFT_2D(y)
     # print("ours:")
     # print(za)
 
-    # zb = fft2(y)
+    # zb = ifft2(y)
     # print("actual:")
     # print(zb)
 
@@ -231,7 +286,8 @@ if __name__ == "__main__":
     if mode == 1:
         mode_1(adjusted_image_array)
     elif mode == 2: 
-        mode_2()
+        print("Work in progress here")
+        mode_2(adjusted_image_array)
     elif mode == 3: 
         mode_3()
     elif mode == 4: 

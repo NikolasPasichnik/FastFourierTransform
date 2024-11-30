@@ -1,4 +1,5 @@
 import argparse
+import time
 import numpy as np
 import cv2
 import math 
@@ -67,7 +68,7 @@ def naive_inverse_DFT_1D(vector):
 
 # Discrete fourier transform 2D
 def naive_DFT_2D(vector_2D):
-    print("naive_DFT_2D")
+    # print("naive_DFT_2D")
 
     M = len(vector_2D[0]) #row/width 
     N = len(vector_2D) #column/height
@@ -183,7 +184,7 @@ def fft_dft_1d(img_1D_array):
         # converting the original image into a NumPy array, we resize it so that it is.
     N = len(img_1D_array)
     if N <= 16: # stop splitting the problem and use naive method instead
-        # We chose to stop splitting the problems at 16
+        # We chose to stop splitting the problems at 16 
         # We just want the runtime of your FFT to be in the same order of magnitude as what is theoretically expected 
         return naive_DFT_1D(img_1D_array)
     else:
@@ -247,22 +248,29 @@ def fft_dft_2d(img_2D_array):
 
 # Original vs. Fast Fourier Transform
 def mode_1(image_array):
-    print("Mode 1")
+    print("Executing: Mode 1")
 
     # Obtaining the Fast Fourier Transform of the inputted image (its array) 
     fft_image = FFT_2D(image_array)
 
+    # Obtaining the Fast Fourier Transform using np for reference 
+    # fft_image_lib = np.fft.fft2(image_array)
+
     # Plotting the resulting Fourier Transform 
-    fig, (graph1, graph2) = plt.subplots(1, 2)
+    fig, (graph1, graph2, graph3) = plt.subplots(1, 3)
+    fig.subplots_adjust(wspace=0.5)
     graph1.set_title('Original Image')
     graph1.imshow(image_array, cmap="gray")
-    graph2.set_title('Fourier Transform')
+    graph2.set_title('Our Implementation')
     graph2.imshow(np.abs(fft_image), norm=colors.LogNorm())
+    # graph3.set_title("np.fft.fft2")
+    # graph3.imshow(np.abs(fft_image_lib), norm=colors.LogNorm())
+
     plt.show()
 
 # Original vs. Denoised 
 def mode_2(image_array):
-    print("mode 2")
+    print("Executing: Mode 2")
     
     # Obtaining the Fast Fourier Transform of the inputted image (its array) 
     fft_image = FFT_2D(image_array)
@@ -271,15 +279,17 @@ def mode_2(image_array):
     # High frequencies -> near 0 or 2pi, so we can get the bottom percentile (near 0) or the top percentile (near 2pi) 
     # Getting the cutoffs 
     # We are using .real to only account for real numbers and not complex ones
-    low_cutoff = np.percentile(fft_image.real, 0.0001)
-    high_cutoff = np.percentile(fft_image.real, 99.999)
+    low_cutoff = np.percentile(fft_image.real, 1)
+    high_cutoff = np.percentile(fft_image.real, 99)
    
     # Setting the high frequencies to 0 
     fft_image_filtered = np.where(np.logical_or(fft_image <= low_cutoff,fft_image >= high_cutoff), 0, fft_image)
+    # fft_image_filtered = np.where(np.logical_and(fft_image >= low_cutoff,fft_image <= high_cutoff), 0, fft_image)
 
     # Count and print the number of non-zeros and fraction represented of the original Fourier coefficients
     count_nonzeros = np.count_nonzero(fft_image_filtered)
     print("Number of non-zeros: " + str(count_nonzeros))
+
     # Fraction =  # of non-zeros / # pixels in the image (nbr of rows * nbr of columns)
     print("Fraction of non-zeros: " + str(count_nonzeros / (len(image_array) * len(image_array[0]))))
 
@@ -294,8 +304,9 @@ def mode_2(image_array):
     graph2.imshow(denoised_image_filtered, cmap="gray")
     plt.show()
 
+# Compression
 def mode_3(image_array):
-    print("mode 3")
+    print("Executing: Mode 3")
     # Obtaining the Fast Fourier Transform of the inputted image (its array) 
     fft_image = FFT_2D(image_array)
 
@@ -340,49 +351,95 @@ def mode_3(image_array):
     
     plt.show()
     
-
-
 def mode_4():
-    print("mode 4")
+    print("Executing: Mode 4")
 
+    # sizes = [2^5, 2^6, 2^7, 2^8, 2^9, 2^10]
+    sizes = [32, 64, 128, 256]
 
-# ===================================================================================================
+    # arrays to hold data that will be plotted 
+    naive_dft_averages = [] 
+    naive_dft_std_dev = []
+    fft_averages = []
+    fft_std_dev = []
+
+    print("========== Computing Average and Variances for varying problem sizes ==========\n")
+    # Executing a set of naive dft and fft for each problem size
+    for index in range(len(sizes)): 
+        current_size = sizes[index]
+        runtime_naive_dft = []
+        runtime_fft = []
+
+        # Creating a random 2D array of size current_size
+        array_2d = np.random.random((current_size, current_size))
+
+        # Executing the naive dft and fft for each provlem size 10 times to get a representative average
+        for iteration in range(10):
+            # Running Naive DFT
+            start = time.time()
+            naive_DFT_2D(array_2d)
+            end = time.time() 
+            # Updating runtime array
+            runtime_naive_dft.append(end-start) 
+
+            # Running FFT DFT
+            start = time.time()
+            fft_dft_2d(array_2d)
+            end = time.time() 
+            # Updating runtime array
+            runtime_fft.append(end-start) 
+
+        # Computing the averages for naive and fft
+        naive_dft_averages.append(np.average(runtime_naive_dft))
+        fft_averages.append(np.average(runtime_fft))
+
+        # Computing the standard deviation for naive and fft
+        naive_dft_std_dev.append(np.std(runtime_naive_dft))
+        fft_std_dev.append(np.std(runtime_fft))
+
+        # print("===============================================================================")
+        print(f"Problem Size: {current_size}")
+        print(f"Average Naive DFT Runtime: {naive_dft_averages[index]}")
+        print(f"Standard Deviation of Naive DFT Runtime: {naive_dft_std_dev[index]}")
+        print(f"Average FFT Runtime: {fft_averages[index]}")
+        print(f"Standard Deviation of FFT Runtime: {fft_std_dev[index]}")
+        print("\n===============================================================================\n")
+    
+    # Plotting 
+    plt.title("Fourier Transform Runtime vs Array Size")
+    plt.xlabel("Problem Size")
+    plt.ylabel("Runtime (s)")
+
+    # Plotting the Naive Discrete Fourier Transform runtime (with error bars)
+    naive_dft_error_bar = [std * 2 for std in naive_dft_std_dev]
+    plt.errorbar(sizes, naive_dft_averages, label= "Naive DFT", color="red", yerr=naive_dft_error_bar, capsize=5, ecolor="black")
+
+    # Plotting the Fast Fourier Transform runtime (with error bars)
+    fft_error_bar = [std * 2 for std in fft_std_dev]
+    plt.errorbar(sizes, fft_averages, label= "FFT", color="blue", yerr=fft_error_bar, capsize=5, ecolor="black")
+
+    # Displaying the graph
+    plt.legend() 
+    plt.show() 
 
 if __name__ == "__main__":
     args = parse_input()
 
-    # Getting input 
-    print(args.mode)
-    print(args.image)
-
     # Getting adjusted dimensions 
     adjusted_image_array = get_adjusted_dimensions(args.image)
-
-    # # Testing the functions
-    y = adjusted_image_array
-    # y = fft2(adjusted_image_array)
-
-    # za = inverse_FFT_2D(y)
-    # print("ours:")
-    # print(za)
-
-    # zb = ifft2(y)
-    # print("actual:")
-    # print(zb)
 
     # Running the correct mode
     mode = args.mode
     if mode == 1:
         mode_1(adjusted_image_array)
     elif mode == 2: 
-        print("Work in progress here")
         mode_2(adjusted_image_array)
     elif mode == 3: 
         mode_3(adjusted_image_array)
     elif mode == 4: 
         mode_4()
     else: 
-        print("Invalid mode") #add actual error
+        print("Invalid Mode") 
 
 
     

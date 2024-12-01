@@ -36,7 +36,7 @@ def get_adjusted_dimensions(image_path):
 
     return adjusted_image_array
 
-# ========================================= Discrete Fourier Transform (1D and 2D) =========================================
+# ========================================= Naive Discrete Fourier Transform (1D and 2D) =========================================
 
 # Discrete Fourier Transform (DFT) -> X_k = sum{n: 0 to N-1}(x_n * e^(-i*[2{pi}*k*n]/N)) for k = 0 to N-1
 def naive_DFT_1D(vector):
@@ -179,71 +179,6 @@ def inverse_FFT_2D(vector_2D):
     
     return F
 
-def fft_dft_1d(img_1D_array):
-        # we can assume that the size of img_1D_array is a power of 2 as when 
-        # converting the original image into a NumPy array, we resize it so that it is.
-    N = len(img_1D_array)
-    if N <= 16: # stop splitting the problem and use naive method instead
-        # We chose to stop splitting the problems at 16 
-        # We just want the runtime of your FFT to be in the same order of magnitude as what is theoretically expected 
-        return naive_DFT_1D(img_1D_array)
-    else:
-        # Split the sum in the even and odd indices which we sum separately and then put together
-        X = np.zeros(N, dtype=complex)
-        # list[start:end:step].
-        even = fft_dft_1d(img_1D_array[0::2])
-        odd = fft_dft_1d(img_1D_array[1::2])
-
-        for k in range (N //2):
-            X[k] = even[k] + np.exp((-2j * np.pi * k) / N) * odd[k]
-            X[k + (N // 2)] = even[k] + np.exp((-2j * np.pi * (k + (N // 2))) / N) * odd[k]
-        return X
-        
-def fft_dft_1d_inverse(img_1D_array):
-    # we can assume that the size of img_1D_array is a power of 2 as when 
-    # converting the original image into a NumPy array, we resize it so that it is.
-    N = len(img_1D_array)
-    if N <= 16:
-        return naive_DFT_1D(img_1D_array)
-    else:
-        # Split the sum in the even and odd indices which we sum separately and then put together
-        x = np.zeros(N, dtype=complex)
-        # list[start:end:step].
-        even = fft_dft_1d_inverse(img_1D_array[0::2])
-        odd = fft_dft_1d_inverse(img_1D_array[1::2])
-
-        for k in range (N //2):
-            x[k] = (1/2)* (even[k] + np.exp((2j * np.pi * k) / N) * odd[k])
-            x[k + (N // 2)] = (1/2)* (even[k] + np.exp((2j * np.pi * (k + (N // 2))) / N) * odd[k])
-
-        return x
-        
-def fft_dft_2d_inverse(img_2D_array):
-    complex_img_array = np.asarray(img_2D_array, dtype=complex)
-    h, w = complex_img_array.shape[:2]
-
-    F = np.zeros((h, w), dtype=complex)
-
-    for row in range(h):
-        F[row, :] = fft_dft_1d_inverse(complex_img_array[row, :])
-
-    for column in range(w):
-        F[:, column] = fft_dft_1d_inverse(F[:,column])
-    return F   
-    
-def fft_dft_2d(img_2D_array):
-    complex_img_array = np.asarray(img_2D_array, dtype=complex)
-    h, w = complex_img_array.shape[:2]
-
-    F = np.zeros((h, w), dtype=complex)
-
-    for row in range(h):
-        F[row, :] = fft_dft_1d(complex_img_array[row, :])
-
-    for column in range(w):
-        F[:, column] = fft_dft_1d(F[:,column])
-    return F 
-
 # ========================================= Different Modes =========================================
 
 # Original vs. Fast Fourier Transform
@@ -251,10 +186,10 @@ def mode_1(image_array):
     print("Executing: Mode 1")
 
     # Obtaining the Fast Fourier Transform of the inputted image (its array) 
-    fft_image = FFT_2D(image_array)
+    fft_output = FFT_2D(image_array)
 
     # Obtaining the Fast Fourier Transform using np for reference 
-    # fft_image_lib = np.fft.fft2(image_array)
+    fft_image_lib = np.fft.fft2(image_array)
 
     # Plotting the resulting Fourier Transform 
     fig, (graph1, graph2, graph3) = plt.subplots(1, 3)
@@ -262,9 +197,9 @@ def mode_1(image_array):
     graph1.set_title('Original Image')
     graph1.imshow(image_array, cmap="gray")
     graph2.set_title('Our Implementation')
-    graph2.imshow(np.abs(fft_image), norm=colors.LogNorm())
-    # graph3.set_title("np.fft.fft2")
-    # graph3.imshow(np.abs(fft_image_lib), norm=colors.LogNorm())
+    graph2.imshow(np.abs(fft_output), norm=colors.LogNorm())
+    graph3.set_title("np.fft.fft2")
+    graph3.imshow(np.abs(fft_image_lib), norm=colors.LogNorm())
 
     plt.show()
 
@@ -273,80 +208,80 @@ def mode_2(image_array):
     print("Executing: Mode 2")
     
     # Obtaining the Fast Fourier Transform of the inputted image (its array) 
-    fft_image = FFT_2D(image_array)
+    fft_output = FFT_2D(image_array)
 
     # ~~Denoise Process~~
     # High frequencies -> near 0 or 2pi, so we can get the bottom percentile (near 0) or the top percentile (near 2pi) 
     # Getting the cutoffs 
     # We are using .real to only account for real numbers and not complex ones
-    low_cutoff = np.percentile(fft_image.real, 1)
-    high_cutoff = np.percentile(fft_image.real, 99)
+    low_cutoff = np.percentile(fft_output.real, 1)
+    high_cutoff = np.percentile(fft_output.real, 99)
    
     # Setting the high frequencies to 0 
-    fft_image_filtered = np.where(np.logical_or(fft_image <= low_cutoff,fft_image >= high_cutoff), 0, fft_image)
+    filtered_fft_output = np.where(np.logical_or(fft_output <= low_cutoff,fft_output >= high_cutoff), 0, fft_output)
     # fft_image_filtered = np.where(np.logical_and(fft_image >= low_cutoff,fft_image <= high_cutoff), 0, fft_image)
 
     # Count and print the number of non-zeros and fraction represented of the original Fourier coefficients
-    count_nonzeros = np.count_nonzero(fft_image_filtered)
+    count_nonzeros = np.count_nonzero(filtered_fft_output)
     print("Number of non-zeros: " + str(count_nonzeros))
 
     # Fraction =  # of non-zeros / # pixels in the image (nbr of rows * nbr of columns)
     print("Fraction of non-zeros: " + str(count_nonzeros / (len(image_array) * len(image_array[0]))))
 
     # Inverting the filtered image to get denoised image
-    denoised_image_filtered = inverse_FFT_2D(fft_image_filtered).real
+    denoised_filtered_fft_output = inverse_FFT_2D(filtered_fft_output).real
 
     # Plotting the original and denoised images
     fig, (graph1, graph2) = plt.subplots(1, 2)
     graph1.set_title('Original Image')
     graph1.imshow(image_array, cmap="gray")
     graph2.set_title('Denoised Image')
-    graph2.imshow(denoised_image_filtered, cmap="gray")
+    graph2.imshow(denoised_filtered_fft_output, cmap="gray")
     plt.show()
 
 # Compression
 def mode_3(image_array):
     print("Executing: Mode 3")
     # Obtaining the Fast Fourier Transform of the inputted image (its array) 
-    fft_image = FFT_2D(image_array)
+    fft_output = FFT_2D(image_array)
 
-    compressed_img = [] # Array storing the compressed images at different compression levels, used for plotting
+    compressed_images = [] # Array storing the compressed images at different compression levels, used for plotting
     compression_levels = [0, 20, 40, 60, 80, 99.9] 
 
     # Loop iterating over each level defined in compression_levels
     for level in compression_levels:
         # Create a copy of the image to not modify the original image while performing the compression
-        fft_copy = np.copy(fft_image) 
+        fft_output_copy = np.copy(fft_output) 
 
         # Compute the amount of frequencies to keep aka threshold
         threshold = 100 - level
 
         # Calculate the lower and upper bounds for frequency values to keep
-        low = np.percentile(fft_image.real, threshold // 2)
-        high = np.percentile(fft_image.real, 100 - threshold // 2)
+        low_cutoff = np.percentile(fft_output.real, threshold // 2)
+        high_cutoff = np.percentile(fft_output.real, 100 - threshold // 2)
 
         # Condition checking if frequencies are within or outside of bounds
-        condition = np.logical_or(fft_copy >= high, fft_copy <= low)
+        condition = np.logical_or(fft_output_copy >= high_cutoff, fft_output_copy <= low_cutoff)
 
         # All frequencies outside bounds will be set to 0 (compression)
-        fft_copy = fft_copy * condition
+        compressed_fft_output = fft_output_copy * condition
 
         # Count the number of non-zeros in the compressed image
-        count_nonzero = np.count_nonzero(fft_copy)
-        print(f"Level {level}% compression has {count_nonzero} non-zeros out of {fft_copy.size}")
+        count_nonzero = np.count_nonzero(compressed_fft_output)
+        print(f"Level {level}% compression has {count_nonzero} non-zeros out of {compressed_fft_output.size}")
 
         # Obtain final transformed image
-        fft_copy = inverse_FFT_2D(fft_copy).real
+        compressed_img = inverse_FFT_2D(compressed_fft_output).real
 
-        compressed_img.append(fft_copy)
+        compressed_images.append(compressed_img)
 
     # Plot the compressed images for each level
     fig, graph = plt.subplots(2, 3) # 2 x 3 grid
-    for i in range (len(compressed_img)):
+    for i in range (len(compressed_images)):
         # Calculate row and column for the current subplot
         r, c = divmod(i,3) 
         # Plot
-        graph[r,c].imshow(compressed_img[i], cmap="gray")
+        graph[r,c].imshow(compressed_images[i], cmap="gray")
         graph[r,c].set_title(f"Compression: {compression_levels[i]}%")
     
     plt.show()
@@ -365,7 +300,8 @@ def mode_4():
 
     print("========== Computing Average and Variances for varying problem sizes ==========\n")
     # Executing a set of naive dft and fft for each problem size
-    for index in range(len(sizes)): 
+    for index in range(len(sizes)):
+        # print(f"-----Size #{sizes[index]}----") 
         current_size = sizes[index]
         runtime_naive_dft = []
         runtime_fft = []
@@ -375,6 +311,7 @@ def mode_4():
 
         # Executing the naive dft and fft for each provlem size 10 times to get a representative average
         for iteration in range(10):
+            # print(f"-----Iteration #{iteration}----")
             # Running Naive DFT
             start = time.time()
             naive_DFT_2D(array_2d)
@@ -384,7 +321,7 @@ def mode_4():
 
             # Running FFT DFT
             start = time.time()
-            fft_dft_2d(array_2d)
+            FFT_2D(array_2d)
             end = time.time() 
             # Updating runtime array
             runtime_fft.append(end-start) 
@@ -440,6 +377,3 @@ if __name__ == "__main__":
         mode_4()
     else: 
         print("Invalid Mode") 
-
-
-    

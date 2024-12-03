@@ -1,4 +1,5 @@
 import argparse
+import os
 import time
 import numpy as np
 import cv2
@@ -192,7 +193,7 @@ def mode_1(image_array):
 
     # Plotting the resulting Fourier Transform 
     # fig, (graph1, graph2, graph3) = plt.subplots(1, 3) (experiment)
-    fig, (graph1, graph2) = plt.subplots(1, 3)
+    fig, (graph1, graph2) = plt.subplots(1, 2)
     fig.subplots_adjust(wspace=0.5)
     graph1.set_title('Original Image')
     graph1.imshow(image_array, cmap="gray")
@@ -210,7 +211,6 @@ def mode_2(image_array):
     
     # Obtaining the Fast Fourier Transform of the inputted image (its array) 
     fft_output = FFT_2D(image_array)
-    filtered_fft_output = np.copy(fft_output)
 
     # ~~Denoise Process~~
     # High frequencies -> near 0 or 2pi, so we can get the bottom percentile (near 0) or the top percentile (near 2pi) 
@@ -222,7 +222,6 @@ def mode_2(image_array):
     # Setting the high frequencies to 0 
     filtered_fft_output = np.where(np.logical_or(fft_output <= low_cutoff,fft_output >= high_cutoff), 0, fft_output)
     # filtered_fft_output = np.where(np.logical_and(fft_output >= low_cutoff,fft_output <= high_cutoff), 0, fft_output) (experiment)
-
 
     # Count and print the number of non-zeros and fraction represented of the original Fourier coefficients
     count_nonzeros = np.count_nonzero(filtered_fft_output)
@@ -365,6 +364,17 @@ def mode_4():
 if __name__ == "__main__":
     args = parse_input()
 
+    # Checking existence of image 
+    if (os.path.isfile(args.image) == False):
+        print("Error: inputted image not found")
+        exit(1)
+
+    # Checking the type of file inputted
+    file, file_extension = os.path.splitext(args.image)
+    if file_extension != ".png" :
+        print("Error: invalid file extension, please input a .png file")
+        exit(1)
+
     # Getting adjusted dimensions 
     adjusted_image_array = get_adjusted_dimensions(args.image)
 
@@ -379,4 +389,4 @@ if __name__ == "__main__":
     elif mode == 4: 
         mode_4()
     else: 
-        print("Invalid Mode") 
+        print("Error: Invalid Mode") 

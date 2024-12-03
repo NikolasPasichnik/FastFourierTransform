@@ -3,7 +3,6 @@ import time
 import numpy as np
 import cv2
 import math 
-from scipy.fft import fft, ifft, fft2, ifft2
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 
@@ -188,18 +187,20 @@ def mode_1(image_array):
     # Obtaining the Fast Fourier Transform of the inputted image (its array) 
     fft_output = FFT_2D(image_array)
 
-    # Obtaining the Fast Fourier Transform using np for reference 
-    fft_image_lib = np.fft.fft2(image_array)
+    # Obtaining the Fast Fourier Transform using np for reference (experiment)
+    # fft_image_lib = np.fft.fft2(image_array)
 
     # Plotting the resulting Fourier Transform 
-    fig, (graph1, graph2, graph3) = plt.subplots(1, 3)
+    # fig, (graph1, graph2, graph3) = plt.subplots(1, 3) (experiment)
+    fig, (graph1, graph2) = plt.subplots(1, 3)
     fig.subplots_adjust(wspace=0.5)
     graph1.set_title('Original Image')
     graph1.imshow(image_array, cmap="gray")
     graph2.set_title('Our Implementation')
     graph2.imshow(np.abs(fft_output), norm=colors.LogNorm())
-    graph3.set_title("np.fft.fft2")
-    graph3.imshow(np.abs(fft_image_lib), norm=colors.LogNorm())
+    # Experiment plotting below
+    # graph3.set_title("np.fft.fft2")
+    # graph3.imshow(np.abs(fft_image_lib), norm=colors.LogNorm())
 
     plt.show()
 
@@ -209,17 +210,19 @@ def mode_2(image_array):
     
     # Obtaining the Fast Fourier Transform of the inputted image (its array) 
     fft_output = FFT_2D(image_array)
+    filtered_fft_output = np.copy(fft_output)
 
     # ~~Denoise Process~~
     # High frequencies -> near 0 or 2pi, so we can get the bottom percentile (near 0) or the top percentile (near 2pi) 
     # Getting the cutoffs 
     # We are using .real to only account for real numbers and not complex ones
-    low_cutoff = np.percentile(fft_output.real, 1)
-    high_cutoff = np.percentile(fft_output.real, 99)
+    low_cutoff = np.percentile(fft_output.real, 0.0001)
+    high_cutoff = np.percentile(fft_output.real, 99.9999)
    
     # Setting the high frequencies to 0 
     filtered_fft_output = np.where(np.logical_or(fft_output <= low_cutoff,fft_output >= high_cutoff), 0, fft_output)
-    # fft_image_filtered = np.where(np.logical_and(fft_image >= low_cutoff,fft_image <= high_cutoff), 0, fft_image)
+    # filtered_fft_output = np.where(np.logical_and(fft_output >= low_cutoff,fft_output <= high_cutoff), 0, fft_output) (experiment)
+
 
     # Count and print the number of non-zeros and fraction represented of the original Fourier coefficients
     count_nonzeros = np.count_nonzero(filtered_fft_output)
@@ -254,11 +257,11 @@ def mode_3(image_array):
         fft_output_copy = np.copy(fft_output) 
 
         # Compute the amount of frequencies to keep aka threshold
-        threshold = 100 - level
+        threshold = (100 - level) // 2 # the // 2 ensures a symmetric cutoff
 
         # Calculate the lower and upper bounds for frequency values to keep
-        low_cutoff = np.percentile(fft_output.real, threshold // 2)
-        high_cutoff = np.percentile(fft_output.real, 100 - threshold // 2)
+        low_cutoff = np.percentile(fft_output.real, threshold)
+        high_cutoff = np.percentile(fft_output.real, 100 - threshold)
 
         # Condition checking if frequencies are within or outside of bounds
         condition = np.logical_or(fft_output_copy >= high_cutoff, fft_output_copy <= low_cutoff)
